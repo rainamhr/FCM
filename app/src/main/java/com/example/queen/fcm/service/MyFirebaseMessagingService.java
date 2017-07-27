@@ -78,6 +78,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Log.e(TAG, "push json: " + json.toString());
 
         try {
+
             JSONObject data = json.getJSONObject("data");
 
             String title = data.getString("title");
