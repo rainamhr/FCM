@@ -88,8 +88,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             JSONObject payload = data.getJSONObject("payload");
             String videoUrl = (String) payload.get("url");
 
-
-
             Log.e(TAG, "title: " + title);  
             Log.e(TAG, "message: " + message);
             Log.e(TAG, "isBackground: " + isBackground);
