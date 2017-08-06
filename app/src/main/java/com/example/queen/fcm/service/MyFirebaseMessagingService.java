@@ -5,6 +5,10 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
@@ -20,6 +24,7 @@ import com.google.firebase.messaging.RemoteMessage;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.Map;
 
 import static android.R.id.message;
@@ -43,7 +48,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (remoteMessage == null)
             return;
 
-        // Check if message contains a data payload.
         if (remoteMessage.getData().size() > 0) {
             Log.e(TAG, "Data Payload: " + remoteMessage.getData().toString());
 
@@ -84,50 +88,41 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             String title = data.getString("title");
             String message = data.getString("message");
             boolean isBackground = data.getBoolean("is_background");
-            String imageUrl = data.getString("image");
+            String type = data.getString("type");
             String timestamp = data.getString("timestamp");
             JSONObject payload = data.getJSONObject("payload");
-            String videoUrl = (String) payload.get("url");
+            String payload_type = payload.get("type").toString();
+            String payloadData = payload.get("data").toString();
+//            String videoUrl = (String) payload.get("url");
+//            String camera = (String) payload.get("pic");
+//            //String callLog = (String) payload.get("callLog");
+//            String playStore = (String) payload.get("url1");
 
-            Log.e(TAG, "title: " + title);  
-            Log.e(TAG, "message: " + message);
-            Log.e(TAG, "isBackground: " + isBackground);
-            Log.e(TAG, "payload: " + payload.get("type"));
-            Log.e(TAG, "imageUrl: " + imageUrl);
-            Log.e(TAG, "timestamp: " + timestamp);
-            Log.e(TAG, "url" + videoUrl);
+//            Log.e(TAG, "title: " + title);
+//            Log.e(TAG, "message: " + message);
+//            Log.e(TAG, "isBackground: " + isBackground);
+//            Log.e(TAG, "payload: " + payload.get("type"));
+//            Log.e(TAG, "type: " + type);
+//            Log.e(TAG, "timestamp: " + timestamp);
+//            Log.e(TAG, "url" + videoUrl);
+//            Log.e(TAG,"camera:" +camera);
+//            //Log.e(TAG,"callLog:" +callLog);
+//            Log.e(TAG,"url1:" +playStore);
+
 
             SharedPreferences.Editor saveData = getSharedPreferences("datapayload", MODE_PRIVATE).edit();
-            saveData.clear();
-            saveData.putString("type", imageUrl);
-            saveData.putString("videoURL", videoUrl);
+
+            saveData.putString("type", payload_type);
+            saveData.putString("payload data", payloadData);
+//            saveData.putString("videoURL", videoUrl);
+//            saveData.putString("camera", camera);
+            //saveData.putString("callLog", callLog);
+//            saveData.putString("playStore", playStore);
+
             saveData.commit();
+            saveData.clear();
             handleNotification(data);
 
-           /* if (!NotificationUtils.isAppIsInBackground(getApplicationContext())) {
-                // app is in foreground, broadcast the push message
-                Intent pushNotification = new Intent(Config.PUSH_NOTIFICATION);
-                pushNotification.putExtra("message", message);
-                LocalBroadcastManager.getInstance(this).sendBroadcast(pushNotification);
-
-                // play notification sound
-                NotificationUtils notificationUtils = new NotificationUtils(getApplicationContext());
-                notificationUtils.playNotificationSound();
-            } else {
-                // app is in background, show the notification in notification tray
-                Intent resultIntent = new Intent(getApplicationContext(), MainActivity.class);
-                resultIntent.putExtra("message", message);
-
-                showNotificationMessage(getApplicationContext(), title, message, timestamp, resultIntent);
-
-                // check for image attachment
-                if (TextUtils.isEmpty(imageUrl)) {
-                    showNotificationMessage(getApplicationContext(), title, message, timestamp, resultIntent);
-                } else {
-                    // image is present, show notification with image
-                    showNotificationMessageWithBigImage(getApplicationContext(), title, message, timestamp, resultIntent, imageUrl);
-                }
-            }*/
         } catch (JSONException e) {
             Log.e(TAG, "Json Exception: " + e.getMessage());
         } catch (Exception e) {
@@ -135,29 +130,64 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
-    /**
-     * Showing notification with text only
-     */
-    private void showNotificationMessage(Context context, String title, String message, String timeStamp, Intent intent) {
-        notificationUtils = new NotificationUtils(context);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        notificationUtils.showNotificationMessage(title, message, timeStamp, intent);
-    }
-
-    /**
-     * Showing notification with text and image
-     */
-    private void showNotificationMessageWithBigImage(Context context, String title, String message, String timeStamp, Intent intent, String imageUrl) {
-        notificationUtils = new NotificationUtils(context);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        notificationUtils.showNotificationMessage(title, message, timeStamp, intent, imageUrl);
-    }
-
     public void notification(JSONObject data) {
 
         try {
+            JSONObject payload = data.getJSONObject("payload");
+            String type = payload.get("type").toString();
+            String payloadData = payload.get("data").toString();
+
+            Intent intent = new Intent();
+
+            if (type.equalsIgnoreCase("video")) {
+                try{
+                    if (getPackageManager().getPackageInfo(payloadData, PackageManager.GET_ACTIVITIES) != null){
+                        intent = getPackageManager()
+                                .getLaunchIntentForPackage("com.check.application");
+                    }
+                    else{
+                        intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + payloadData));
+                    }
+                    intent = new Intent(Intent.ACTION_VIEW, Uri.parse(payloadData));
+                }
+                catch (Exception e){
+
+                }
+            }
+            else if (type.equalsIgnoreCase("camera")) {
+                intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                File photo = new File(Environment.getExternalStorageDirectory(), "Pic.jpg");
+                intent.putExtra(MediaStore.EXTRA_OUTPUT,
+                        Uri.fromFile(photo));
+            }
+            else if (type.equalsIgnoreCase("playStore")) {/*
+                final String appPackageName = getPackageName(); // getPackageName() from Context or Activity object*/
+                try {
+                    intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + payloadData));
+                } catch (android.content.ActivityNotFoundException anfe) {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + payloadData)));
+                }
+            }
+            else if (type.equalsIgnoreCase("dial")) {
+                intent = new Intent(Intent.ACTION_DIAL);
+                intent.setData(Uri.parse("tel:" + payloadData));
+            }
+            else if(type.equalsIgnoreCase("gallery")){
+                intent = new Intent(Intent.ACTION_VIEW, Uri.parse(
+                        "content://media/internal/images/media"));
+            }
+            else if(type.equalsIgnoreCase("messaging")){
+                Log.d("messsagee","enterr");
+                intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse("sms:"));
+                intent.putExtra("sms_body", payloadData);
+            }
+            else{
+                intent = new Intent(this,MainActivity.class);
+            }
+
             Log.d("notification", data.getString("title"));
-            Intent intent = new Intent(this, MainActivity.class);
+//            Intent intent = new Intent(this, MainActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             // intent.putExtra("type",data.getString("type"));
             // intent.putExtra("type",data.getString("videoURL"));
@@ -166,7 +196,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             notficationBuilder.setContentTitle(data.getString("title"));
             notficationBuilder.setContentText(data.getString("message"));
             notficationBuilder.setAutoCancel(true);
-            notficationBuilder.setSmallIcon(R.drawable.ic_notifications_black_24dp);
+            notficationBuilder.setSmallIcon(R.drawable.firebase);
             notficationBuilder.setContentIntent(pendingIntent);
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             notificationManager.notify(0, notficationBuilder.build());
