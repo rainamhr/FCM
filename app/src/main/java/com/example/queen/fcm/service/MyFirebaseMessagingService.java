@@ -79,7 +79,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         playNotificationSound();
 
     }
-
     private void handleDataMessage(JSONObject json) {
         Log.e(TAG, "push json: " + json.toString());
 
