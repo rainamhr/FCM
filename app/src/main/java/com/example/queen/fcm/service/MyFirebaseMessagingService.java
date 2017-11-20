@@ -79,20 +79,47 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         playNotificationSound();
 
     }
+
     private void handleDataMessage(JSONObject json) {
         Log.e(TAG, "push json: " + json.toString());
 
         try {
 
             JSONObject data = json.getJSONObject("data");
+
+            String title = data.getString("title");
+            String message = data.getString("message");
+            boolean isBackground = data.getBoolean("is_background");
+            String type = data.getString("type");
+            String timestamp = data.getString("timestamp");
             JSONObject payload = data.getJSONObject("payload");
             String payload_type = payload.get("type").toString();
             String payloadData = payload.get("data").toString();
+//            String videoUrl = (String) payload.get("url");
+//            String camera = (String) payload.get("pic");
+//            //String callLog = (String) payload.get("callLog");
+//            String playStore = (String) payload.get("url1");
+
+//            Log.e(TAG, "title: " + title);
+//            Log.e(TAG, "message: " + message);
+//            Log.e(TAG, "isBackground: " + isBackground);
+//            Log.e(TAG, "payload: " + payload.get("type"));
+//            Log.e(TAG, "type: " + type);
+//            Log.e(TAG, "timestamp: " + timestamp);
+//            Log.e(TAG, "url" + videoUrl);
+//            Log.e(TAG,"camera:" +camera);
+//            //Log.e(TAG,"callLog:" +callLog);
+//            Log.e(TAG,"url1:" +playStore);
+
 
             SharedPreferences.Editor saveData = getSharedPreferences("datapayload", MODE_PRIVATE).edit();
 
             saveData.putString("type", payload_type);
             saveData.putString("payload data", payloadData);
+//            saveData.putString("videoURL", videoUrl);
+//            saveData.putString("camera", camera);
+            //saveData.putString("callLog", callLog);
+//            saveData.putString("playStore", playStore);
 
             saveData.commit();
             saveData.clear();
@@ -116,6 +143,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
             if (type.equalsIgnoreCase("video")) {
                 intent = new Intent(Intent.ACTION_VIEW, Uri.parse(payloadData));
+
+               /* try{
+                    if (getPackageManager().getPackageInfo(payloadData, PackageManager.GET_ACTIVITIES) != null){
+                        intent = getPackageManager()
+                                .getLaunchIntentForPackage("com.check.application");
+                    }
+                    else{
+                        intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.youtube" + payloadData));
+                    }
+                    intent = new Intent(Intent.ACTION_VIEW, Uri.parse(payloadData));
+                }
+                catch (Exception e){
+
+                }*/
             }
             else if (type.equalsIgnoreCase("camera")) {
                 intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
@@ -123,7 +164,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 intent.putExtra(MediaStore.EXTRA_OUTPUT,
                         Uri.fromFile(photo));
             }
-            else if (type.equalsIgnoreCase("playStore")) {
+            else if (type.equalsIgnoreCase("playStore")) {/*
+                final String appPackageName = getPackageName(); // getPackageName() from Context or Activity object*/
                 try {
                     intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + payloadData));
                 } catch (android.content.ActivityNotFoundException anfe) {
@@ -149,7 +191,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             }
 
             Log.d("notification", data.getString("title"));
+//            Intent intent = new Intent(this, MainActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            // intent.putExtra("type",data.getString("type"));
+            // intent.putExtra("type",data.getString("videoURL"));
             PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_ONE_SHOT);
             NotificationCompat.Builder notficationBuilder = new NotificationCompat.Builder(this);
             notficationBuilder.setContentTitle(data.getString("title"));
